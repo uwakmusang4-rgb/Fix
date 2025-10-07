@@ -6,7 +6,7 @@ on:
       total_commits:
         description: "Jumlah total commit"
         required: true
-        default: "150"
+        default: "1500"
       total_days:
         description: "Jumlah hari pembagian commit (misal 365 = 1 tahun)"
         required: true
@@ -14,11 +14,11 @@ on:
       total_prs:
         description: "Jumlah pull request"
         required: true
-        default: "10"
+        default: "100"
       total_issues:
         description: "Jumlah issue"
         required: true
-        default: "10"
+        default: "100"
 
 jobs:
   generate:
