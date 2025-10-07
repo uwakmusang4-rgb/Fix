@@ -6,7 +6,7 @@ on:
       total_commits:
         description: "Jumlah total commit"
         required: true
-        default: "15"
+        default: "1500"
       total_days:
         description: "Jumlah hari pembagian commit"
         required: true
@@ -14,7 +14,7 @@ on:
       total_prs:
         description: "Jumlah Pull Request"
         required: true
-        default: "1"
+        default: "100"
       total_issues:
         description: "Jumlah Issue"
         required: true
@@ -41,10 +41,6 @@ jobs:
         env:
           TOTAL_COMMITS: ${{ github.event.inputs.total_commits }}
           TOTAL_DAYS: ${{ github.event.inputs.total_days }}
-          GIT_AUTHOR_NAME: "uwakmusang4-rgb"
-          GIT_COMMITTER_NAME: "uwakmusang4-rgb"
-          GIT_AUTHOR_EMAIL: "236301556+uwakmusang4-rgb@users.noreply.github.com"
-          GIT_COMMITTER_EMAIL: "236301556+uwakmusang4-rgb@users.noreply.github.com"
         run: |
           mkdir -p logs
           git pull origin main || true
@@ -57,7 +53,9 @@ jobs:
             for ((i=1; i<=COMMITS_PER_DAY; i++)); do
               echo "Commit ke-$i pada $commit_date" >> logs/commit_$day.txt
               git add logs/commit_$day.txt
-              GIT_COMMITTER_DATE="$commit_date 12:00:00" GIT_AUTHOR_DATE="$commit_date 12:00:00" git commit -m "Commit $i on $commit_date" || true
+              GIT_COMMITTER_DATE="$commit_date 12:00:00" \
+              GIT_AUTHOR_DATE="$commit_date 12:00:00" \
+              git commit -m "Commit $i on $commit_date" || true
             done
           done
 
@@ -68,7 +66,7 @@ jobs:
           sudo apt install -y gh
           echo "${{ secrets.PERSONAL_ACCESS_TOKEN }}" | gh auth login --with-token
 
-      - name: Create pull requests
+      - name: Create pull requests (Fix)
         env:
           GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         run: |
@@ -76,70 +74,13 @@ jobs:
           echo "=== Membuat $TOTAL_PRS Pull Request ==="
           for i in $(seq 1 $TOTAL_PRS); do
             branch="pr-branch-$i-$(date +%s)"
+            echo "File PR $i dibuat pada $(date)" > logs/pr_$i.txt
             git checkout -B $branch
-            echo "File PR $i dibuat" > logs/pr_$i.txt
             git add logs/pr_$i.txt
             git commit -m "Add file for PR $i" || true
             git push -f https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }} HEAD:$branch
-            gh pr create --title "Pull Request #$i" --body "Generated automatically via workflow" --base main --head $branch || echo "PR $i sudah ada"
-          done
-          git checkout main
-
-      - name: Create issues (Fix Version)
-        env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        run: |
-          TOTAL_ISSUES=${{ github.event.inputs.total_issues }}
-          echo "=== Membuat $TOTAL_ISSUES Issue ==="
-          for i in $(seq 1 $TOTAL_ISSUES); do
-            gh issue create \
-              --title "Issue #$i" \
-              --body "This is auto-generated issue number $i" \
-              --repo ${{ github.repository }} || echo "Gagal membuat issue $i"
-          done
-          git config user.name "uwakmusang4-rgb"
-          git config user.email "236301556+uwakmusang4-rgb@users.noreply.github.com"
-
-      - name: Generate distributed commits
-        env:
-          TOTAL_COMMITS: ${{ github.event.inputs.total_commits }}
-          TOTAL_DAYS: ${{ github.event.inputs.total_days }}
-          GIT_AUTHOR_NAME: "uwakmusang4-rgb"
-          GIT_COMMITTER_NAME: "uwakmusang4-rgb"
-          GIT_AUTHOR_EMAIL: "236301556+uwakmusang4-rgb@users.noreply.github.com"
-          GIT_COMMITTER_EMAIL: "236301556+uwakmusang4-rgb@users.noreply.github.com"
-        run: |
-          mkdir -p logs
-          git pull origin main || true
-          COMMITS_PER_DAY=$((TOTAL_COMMITS / TOTAL_DAYS))
-          START_DATE=$(date -d "$TOTAL_DAYS days ago" +%Y-%m-%d)
-
-          echo "Membuat $TOTAL_COMMITS commit selama $TOTAL_DAYS hari..."
-          for ((day=0; day<TOTAL_DAYS; day++)); do
-            commit_date=$(date -d "$START_DATE +$day days" +%Y-%m-%d)
-            for ((i=1; i<=COMMITS_PER_DAY; i++)); do
-              echo "Commit ke-$i pada $commit_date" >> logs/commit_$day.txt
-              git add logs/commit_$day.txt
-              GIT_COMMITTER_DATE="$commit_date 12:00:00" GIT_AUTHOR_DATE="$commit_date 12:00:00" git commit -m "Commit $i on $commit_date" || true
-            done
-          done
-
-          git push https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }} HEAD:main
-
-      - name: Create pull requests
-        env:
-          GH_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-        run: |
-          TOTAL_PRS=${{ github.event.inputs.total_prs }}
-          echo "=== Membuat $TOTAL_PRS Pull Request ==="
-          for i in $(seq 1 $TOTAL_PRS); do
-            branch="pr-branch-$i-$(date +%s)"
-            git checkout -B $branch
-            echo "File PR $i dibuat" > logs/pr_$i.txt
-            git add logs/pr_$i.txt
-            git commit -m "Add file for PR $i" || true
-            git push -f https://x-access-token:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${{ github.repository }} HEAD:$branch
-            gh pr create --title "Pull Request #$i" --body "Generated automatically via workflow" --base main --head $branch || echo "PR $i sudah ada"
+            gh pr create --title "Pull Request #$i" --body "Generated via workflow" --base main --head $branch || echo "PR $i gagal dibuat"
+            sleep 2
           done
           git checkout main
 
@@ -150,5 +91,9 @@ jobs:
           TOTAL_ISSUES=${{ github.event.inputs.total_issues }}
           echo "=== Membuat $TOTAL_ISSUES Issue ==="
           for i in $(seq 1 $TOTAL_ISSUES); do
-            gh issue create --title "Issue #$i" --body "Auto generated issue $i via workflow" || echo "Gagal membuat issue $i"
+            gh issue create \
+              --title "Issue #$i" \
+              --body "Auto-generated issue number $i untuk kontribusi" \
+              --repo ${{ github.repository }} || echo "Gagal membuat issue $i"
+            sleep 1
           done
